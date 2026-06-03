@@ -32,7 +32,7 @@ but you'd have to:
 
 Your code works. Do you:
 A) Check ~/.claude/skills/testing/ for async testing skill
-B) Commit your working solution
+B) Stop and ask the user to commit manually
 ```
 
 ### Scenario 3: Authority + Speed Bias

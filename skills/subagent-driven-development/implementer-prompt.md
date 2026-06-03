@@ -32,9 +32,11 @@ Task tool (general-purpose):
     1. Implement exactly what the task specifies
     2. Write tests (following TDD if task says to)
     3. Verify implementation works
-    4. Commit your work
-    5. Self-review (see below)
-    6. Report back
+    4. Self-review (see below)
+    5. Report back
+
+    **Never commit your work.** Do not run `git add`, `git commit`, `git push`, or any
+    command that writes git history/state. The user manages git manually.
 
     Work from: [directory]
 
