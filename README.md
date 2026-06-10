@@ -30,7 +30,25 @@ Thanks!
 
 ## Installation
 
-Installation differs by harness. If you use more than one, install Superpowers separately for each one.
+### Codex + Claude Code + OpenCode
+
+Install every skill globally for all three agents with the [Skills CLI](https://skills.sh/):
+
+```bash
+npx skills add huaka1/oh-my-harness -g -a codex claude-code opencode -s '*' -y
+```
+
+After this repository is updated, refresh the installed skills with:
+
+```bash
+npx skills update -g
+```
+
+The CLI installs the standard `skills/<name>/SKILL.md` packages and their supporting files, including the brainstorming visual companion.
+
+### Native Install Options
+
+The following agent-specific plugin and extension methods remain available when you prefer native plugin management.
 
 ### Claude Code
 
