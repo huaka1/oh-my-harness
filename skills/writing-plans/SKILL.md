@@ -1,82 +1,92 @@
 ---
 name: writing-plans
-description: 当你有需求或多步骤任务时，在写代码之前使用此 skill
+description: Use when you have a spec or requirements for a multi-step task, before touching code
 ---
 
-# 编写计划
+# Writing Plans
 
-## 概述
+## Overview
 
-编写全面的实现计划，假设工程师对代码库零上下文且品味可疑。记录他们需要知道的一切：每个 task 要改哪些文件、代码、测试、可能需要检查的文档、如何测试。把整个计划作为小粒度 task 给出。DRY。YAGNI。TDD。
+Write implementation plans for an engineer with zero repository context and
+questionable judgment. The plan must say which files to touch, what interfaces
+each task consumes and produces, how to test each step, and what evidence proves
+the work is done. DRY. YAGNI. TDD.
 
-假设他们是熟练的开发者，但对我们的工具集或问题领域几乎一无所知。假设他们不太了解好的测试设计。
+**Announce at start:** "I'm using the writing-plans skill to create the implementation plan."
 
-**开始时宣布：** "我正在使用 writing-plans skill 创建实现计划。"
+**Save plans to:** `docs/harness/plan/YYYY-MM-DD-<feature-name>-plan.md`
+- User preferences for plan location override this default.
 
-**上下文：** 如果在隔离的 worktree 中工作，它应该在执行时通过 `using-git-worktrees` skill 创建。
+**Before planning, read when present:**
+- `docs/harness/standard/` for engineering standards
+- `docs/harness/design/` for durable architecture decisions
+- `docs/harness/knowledge/` for lessons and cached project knowledge
 
-**保存计划到：** `docs/harness/plan/YYYY-MM-DD-<feature-name>-plan.md`
-- （用户对计划位置的偏好覆盖此默认值）
+**Git policy:** Do not add commit steps. Do not instruct agents to run
+`git add`, `git commit`, or `git push`. The user manages git history manually.
 
-**开始前阅读：**
-- `docs/harness/standard/` — 项目编码规范
-- `docs/harness/design/` — 现有架构设计
-- `docs/harness/knowledge/` — 历史 bug 经验和缓存的网页知识
+## Scope Check
 
-## 范围检查
+If the spec covers multiple independent subsystems, suggest separate plans.
+Each plan should produce independently working, testable software.
 
-如果需求覆盖了多个独立子系统，它应该在头脑风暴阶段就被分解为子项目需求。如果没有，建议拆分为独立计划 — 每个子系统一个。每个计划应该能独立产出可运行、可测试的软件。
+## File Structure
 
-## 文件结构
+Before defining tasks, map the files that will be created or modified and each
+file's responsibility. Use this to lock task boundaries.
 
-在定义 task 之前，先列出将要创建或修改的文件以及每个文件的职责。这是锁定分解决策的地方。
+- Prefer small files with clear responsibilities and interfaces.
+- Keep files that change together near each other.
+- Follow existing project patterns.
+- Include focused cleanup only when it directly supports the task.
 
-- 设计边界清晰、接口定义良好的单元。每个文件应有一个明确的职责。
-- 你对能在上下文中完整容纳的代码推理更好，编辑也更可靠。优先选择更小、更聚焦的文件，而非大而全的文件。
-- 一起变更的文件应该放在一起。按职责拆分，而非按技术层。
-- 在现有代码库中，遵循已建立的模式。如果代码库使用大文件，不要单方面重构 — 但如果你正在修改的文件已经变得难以管理，在计划中包含拆分是合理的。
+## Task Right-Sizing
 
-这个结构指导 task 分解。每个 task 应产出独立有意义的自包含变更。
+A task is the smallest unit that carries its own test cycle and is worth a fresh
+review gate. Fold setup, configuration, and docs into the task that needs them.
+Split only where a reviewer could approve one task while rejecting another.
 
-## 小粒度 Task
+## Plan Header
 
-**每步是一个操作（2-5 分钟）：**
-- "写失败的测试" — 一步
-- "运行它确保失败" — 一步
-- "实现最小代码让测试通过" — 一步
-- "运行测试确保通过" — 一步
-
-## 计划文档头
-
-**每个计划必须以此头开始：**
+Every plan must start with:
 
 ```markdown
-# [功能名称] 实现计划
+# [Feature Name] Implementation Plan
 
-> **给 agent 工作者：** 必须使用 subagent-driven-development（推荐）或 executing-plans 来逐 task 实现此计划。步骤使用 checkbox（`- [ ]`）语法跟踪。
+> **For agentic workers:** Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Do not run `git add`, `git commit`, or `git push`; the user manages git history manually.
 
-**目标：** [一句话描述构建什么]
+**Goal:** [One sentence describing what this builds]
 
-**架构：** [2-3 句话描述方案]
+**Architecture:** [2-3 sentences about the approach]
 
-**技术栈：** [关键技术/库]
+**Tech Stack:** [Key technologies/libraries]
 
-**主链路验收：** [用户入口 → 关键操作 → 成功结果；不涉及用户可见行为时写“不适用”并说明原因]
+**Main Path Acceptance:** [User entry -> key action -> success result; if not user-visible, state why it is not applicable.]
+
+## Global Constraints
+
+[Project-wide requirements copied from the spec: version floors, dependency
+limits, naming, paths, platform support, user-visible acceptance rules. Every
+task implicitly includes this section.]
 
 ---
 ```
 
-## Task 结构
+## Task Structure
 
 ````markdown
-### Task N: [组件名称]
+### Task N: [Component Name]
 
-**文件：**
-- 创建：`exact/path/to/file.py`
-- 修改：`exact/path/to/existing.py:123-145`
-- 测试：`tests/exact/path/to/test.py`
+**Files:**
+- Create: `exact/path/to/file.py`
+- Modify: `exact/path/to/existing.py:123`
+- Test: `tests/exact/path/to/test.py`
 
-- [ ] **Step 1: 写失败的测试**
+**Interfaces:**
+- Consumes: [what this task uses from earlier tasks: exact names/signatures]
+- Produces: [what later tasks rely on: exact names/signatures/return types]
+
+- [ ] **Step 1: Write the failing test**
 
 ```python
 def test_specific_behavior():
@@ -84,100 +94,63 @@ def test_specific_behavior():
     assert result == expected
 ```
 
-- [ ] **Step 2: 运行测试验证失败**
+- [ ] **Step 2: Run test to verify it fails**
 
-运行：`pytest tests/path/test.py::test_name -v`
-预期：FAIL，提示 "function not defined"
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: FAIL with "function not defined"
 
-- [ ] **Step 3: 写最小实现**
+- [ ] **Step 3: Write minimal implementation**
 
 ```python
 def function(input):
     return expected
 ```
 
-- [ ] **Step 4: 运行测试验证通过**
+- [ ] **Step 4: Run test to verify it passes**
 
-运行：`pytest tests/path/test.py::test_name -v`
-预期：PASS
+Run: `pytest tests/path/test.py::test_name -v`
+Expected: PASS
 ````
 
-## 禁止占位符
+## No Placeholders
 
-每步必须包含工程师需要的实际内容。以下是**计划失败** — 永远不要写它们：
-- "TBD"、"TODO"、"稍后实现"、"填写细节"
-- "添加适当的错误处理" / "添加验证" / "处理边界情况"
-- "为上述写测试"（没有实际测试代码）
-- "类似 Task N"（重复代码 — 工程师可能不按顺序阅读 task）
-- 描述做什么但不展示如何做的步骤（代码步骤需要代码块）
-- 引用任何 task 中未定义的类型、函数或方法
+Never write:
+- `TBD`, `TODO`, `implement later`, or "fill in details"
+- "Add appropriate error handling" without exact behavior
+- "Write tests for the above" without test code
+- "Similar to Task N"
+- Steps that describe code changes without showing the code
+- Types, functions, or methods not defined in the plan
 
-## 主链路 E2E 验收 Task
+## Main Path Acceptance
 
-如果需求或计划影响用户可见行为，计划末尾必须包含一个主链路 E2E 验收 task。这个 task 证明核心路径真的能走通，不要求覆盖所有边界情况。
+If the spec changes user-visible behavior, include a final acceptance task that
+proves the main path works. If not applicable, state why in the plan header or
+final task.
 
-````markdown
-### Task N: 主链路 E2E 验收
+## Self-Review
 
-**文件：**
-- 测试：`tests/e2e/smoke/<feature>.spec.ts`（如果项目已有 E2E 目录，遵循现有路径）
-- 证据：`test-results/<feature>/` 或项目现有测试产物目录
+After writing the plan, check it yourself:
 
-- [ ] **Step 1: 确认主链路验收契约**
+- Spec coverage: every requirement maps to a task.
+- Placeholder scan: no forbidden placeholder patterns remain.
+- Type consistency: later task signatures match earlier task outputs.
+- Main path: user-visible behavior has a concrete acceptance path.
+- Git policy: no task asks an agent to stage, commit, or push.
 
-从需求文档复制用户入口、关键操作、成功结果和阻塞失败。若需求未定义，先回到需求文档补齐，不要猜。
+Fix issues inline before handing off.
 
-- [ ] **Step 2: 跑通主链路**
+## Execution Handoff
 
-使用项目现有 E2E 工具；没有现成工具时优先使用 Playwright、agent-browser 或 opencli-browser。真实打开页面，执行关键操作，确认成功结果。
+After saving the plan, offer:
 
-- [ ] **Step 3: 保存验收证据**
+**"Plan complete and saved to `docs/harness/plan/<filename>.md`. Two execution options:**
 
-保留 trace、screenshot、video 或命令输出中的至少一种。记录实际路径。
+**1. Subagent-Driven (recommended)** - Fresh subagent per task with task review.
 
-- [ ] **Step 4: 判断是否沉淀为回归测试**
+**2. Inline Execution** - Execute tasks in this session with checkpoints.
 
-如果这是核心用户路径、曾经出过 bug 的路径、权限/多租户/数据持久化路径，保留为 `tests/e2e/smoke/` 或 `tests/e2e/regression/`。否则可只保留 QA 证据。
-````
+**Which approach?"**
 
-如果不涉及用户可见行为，计划头写明不适用原因，不要添加空的 E2E task。
-
-## 记住
-- 总是精确文件路径
-- 每步都有完整代码 — 如果步骤改了代码，展示代码
-- 精确命令及预期输出
-- DRY、YAGNI、TDD
-
-## 自检
-
-写完完整计划后，用全新视角对照需求检查计划。这是你自己运行的检查表 — 不是子 agent 调度。
-
-**1. 需求覆盖：** 浏览需求中的每个部分/要求。你能指出实现它的 task 吗？列出任何缺口。
-
-**2. 占位符扫描：** 在计划中搜索红旗 — 上述"禁止占位符"部分的任何模式。修复它们。
-
-**3. 类型一致性：** 你在后面 task 中使用的类型、方法签名和属性名是否与前面 task 中定义的一致？Task 3 中叫 `clearLayers()` 但 Task 7 中叫 `clearFullLayers()` 就是 bug。
-
-**4. 主链路验收：** 用户可见功能是否有主链路 E2E 验收 task？如果没有，添加；如果不适用，计划头是否写明原因？
-
-发现问题直接修复。不需要重新审阅 — 修完继续。如果发现需求中有对应 task 的要求，添加 task。
-
-## 执行交接
-
-保存计划后，提供执行选择：
-
-**"计划已完成并保存到 `docs/harness/plan/<filename>.md`。两种执行方式：**
-
-**1. 子 Agent 驱动（推荐）** — 我为每个 task 调度一个全新子 agent，task 之间审阅，快速迭代
-
-**2. 内联执行** — 在当前 session 中使用 executing-plans 执行，批量执行带检查点
-
-**选哪种？"**
-
-**如果选择子 Agent 驱动：**
-- **必须使用 SUB-SKILL：** subagent-driven-development
-- 每个 task 全新子 agent + 两阶段审阅
-
-**如果选择内联执行：**
-- **必须使用 SUB-SKILL：** executing-plans
-- 批量执行带审阅检查点
+If Subagent-Driven is chosen, use `subagent-driven-development`. If Inline
+Execution is chosen, use `executing-plans`.
