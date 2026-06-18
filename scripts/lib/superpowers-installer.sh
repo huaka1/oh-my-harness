@@ -5,6 +5,10 @@ sp_die() {
   return 1
 }
 
+sp_tty_available() {
+  { : </dev/tty; } 2>/dev/null
+}
+
 sp_home() {
   printf '%s\n' "${SP_HOME:-$HOME}"
 }
@@ -203,7 +207,16 @@ sp_confirm() {
     return 0
   fi
 
-  read -r -p "$message [y/N] " answer
+  if ! sp_tty_available; then
+    echo "ERROR: confirmation requires a terminal. Re-run with --yes for non-interactive use." >&2
+    return 2
+  fi
+
+  if ! read -r -p "$message [y/N] " answer </dev/tty; then
+    echo "ERROR: failed to read confirmation from terminal" >&2
+    return 2
+  fi
+
   [[ "$answer" == "y" || "$answer" == "Y" ]]
 }
 
@@ -241,7 +254,7 @@ sp_install_skills_target() {
   sp_assert_no_unmanaged_skill_conflicts "$harness" "$scope" "$stage/package" || return 1
 
   echo "Install target: $base"
-  sp_confirm "Install Superpowers skills for $harness ($scope)?" "$yes" || return 1
+  sp_confirm "Install Superpowers skills for $harness ($scope)?" "$yes" || return $?
 
   mkdir -p "$base"
   while IFS= read -r skill; do
@@ -296,7 +309,7 @@ sp_uninstall_one_target() {
 
   echo "Manifest: $manifest"
   sp_installed_paths_from_manifest "$manifest" | sed 's/^/Remove:   /'
-  sp_confirm "Uninstall Superpowers for $harness ($scope)?" "$yes" || return 1
+  sp_confirm "Uninstall Superpowers for $harness ($scope)?" "$yes" || return $?
 
   while IFS= read -r path; do
     [[ -n "$path" ]] || continue

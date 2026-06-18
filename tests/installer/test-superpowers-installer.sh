@@ -67,6 +67,61 @@ assert_path_absent() {
   fi
 }
 
+assert_contains() {
+  local haystack="$1"
+  local needle="$2"
+  local description="$3"
+
+  if printf '%s' "$haystack" | grep -Fq "$needle"; then
+    pass "$description"
+  else
+    fail "$description"
+    echo "    expected output to contain: $needle"
+    printf '%s\n' "$haystack" | sed 's/^/    /'
+  fi
+}
+
+assert_not_contains() {
+  local haystack="$1"
+  local needle="$2"
+  local description="$3"
+
+  if printf '%s' "$haystack" | grep -Fq "$needle"; then
+    fail "$description"
+    echo "    expected output not to contain: $needle"
+    printf '%s\n' "$haystack" | sed 's/^/    /'
+  else
+    pass "$description"
+  fi
+}
+
+run_with_deadline() {
+  local seconds="$1"
+  local output_file="$2"
+  shift 2
+
+  (
+    "$@" </dev/null
+  ) >"$output_file" 2>&1 &
+
+  local pid="$!"
+  local elapsed=0
+  local limit=$((seconds * 10))
+
+  while kill -0 "$pid" 2>/dev/null; do
+    if (( elapsed >= limit )); then
+      kill "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      return 124
+    fi
+
+    sleep 0.1
+    elapsed=$((elapsed + 1))
+  done
+
+  wait "$pid"
+}
+
 cleanup() {
   if [[ -n "$TEST_ROOT" && -d "$TEST_ROOT" ]]; then
     rm -rf "$TEST_ROOT"
@@ -155,14 +210,38 @@ run_tests() {
   bash "$REPO_ROOT/scripts/uninstall.sh" --harness codex --scope project --yes >/dev/null
   assert_path_absent "$SP_PROJECT_DIR/.codex/skills/using-superpowers" "uninstall wrapper removes Codex project skills"
 
-  local tui_output
-  tui_output="$(printf '4\n4\n2\n' | bash "$REPO_ROOT/scripts/superpowers-installer.sh")"
-  if printf '%s' "$tui_output" | grep -Fq "opencode (project): not installed"; then
-    pass "no-argument TUI can run status for all project targets"
+  echo "=== non-terminal safety ==="
+  local no_tty_output no_tty_status no_tty_file
+  no_tty_file="$TEST_ROOT/no-tty-menu.out"
+  set +e
+  run_with_deadline 2 "$no_tty_file" bash "$REPO_ROOT/scripts/superpowers-installer.sh" --action install
+  no_tty_status=$?
+  set -e
+  no_tty_output="$(sed -n '1,80p' "$no_tty_file")"
+  if [[ "$no_tty_status" -ne 0 && "$no_tty_status" -ne 124 ]]; then
+    pass "missing TUI input exits quickly without a terminal"
   else
-    fail "no-argument TUI can run status for all project targets"
-    echo "$tui_output" | sed 's/^/    /'
+    fail "missing TUI input exits quickly without a terminal"
+    echo "    status: $no_tty_status"
+    printf '%s\n' "$no_tty_output" | sed 's/^/    /'
   fi
+  assert_contains "$no_tty_output" "interactive TUI requires a terminal" "missing TUI input explains terminal requirement"
+  assert_not_contains "$no_tty_output" "Invalid selection" "missing TUI input does not loop through invalid selections"
+
+  no_tty_file="$TEST_ROOT/no-tty-confirm.out"
+  set +e
+  run_with_deadline 2 "$no_tty_file" bash "$REPO_ROOT/scripts/superpowers-installer.sh" --action install --harness codex --scope project
+  no_tty_status=$?
+  set -e
+  no_tty_output="$(sed -n '1,80p' "$no_tty_file")"
+  if [[ "$no_tty_status" -ne 0 && "$no_tty_status" -ne 124 ]]; then
+    pass "missing confirmation input exits quickly without a terminal"
+  else
+    fail "missing confirmation input exits quickly without a terminal"
+    echo "    status: $no_tty_status"
+    printf '%s\n' "$no_tty_output" | sed 's/^/    /'
+  fi
+  assert_contains "$no_tty_output" "confirmation requires a terminal" "missing confirmation input explains terminal requirement"
 }
 
 run_tests

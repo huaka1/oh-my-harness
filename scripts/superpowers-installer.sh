@@ -31,13 +31,22 @@ choose_menu() {
   local choice
   local idx
 
+  if ! sp_tty_available; then
+    echo "ERROR: interactive TUI requires a terminal. Pass --action, --harness, and --scope for non-interactive use." >&2
+    return 2
+  fi
+
   echo "$prompt" >&2
   for idx in "${!options[@]}"; do
     printf '  %s. %s\n' "$((idx + 1))" "${options[$idx]}" >&2
   done
 
   while true; do
-    read -r -p "Select 1-${#options[@]}: " choice
+    if ! read -r -p "Select 1-${#options[@]}: " choice </dev/tty; then
+      echo "ERROR: failed to read selection from terminal" >&2
+      return 2
+    fi
+
     if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
       printf '%s\n' "${options[$((choice - 1))]}"
       return 0
