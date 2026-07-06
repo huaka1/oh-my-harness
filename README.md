@@ -46,7 +46,7 @@ Skills CLI 会自动处理各 Agent 的 skill 目录。Codex 与 OpenCode 通常
 
 ```text
 需求或想法
-  -> brainstorming：澄清需求，输出 feature 文档
+  -> brainstorming：澄清需求，输出需求或设计文档
   -> writing-plans：生成可执行计划
   -> subagent-driven-development / executing-plans：执行计划
   -> test-driven-development：测试先行
@@ -83,9 +83,9 @@ skills/brainstorming/visual-companion.md
 | `finishing-a-development-branch` | 完成测试后处理合并、PR 或清理。 |
 | `writing-skills` | 创建、修改和验证 skills。 |
 
-## 项目文档约定
+## 项目文档约定片段
 
-这些 skills 默认使用以下结构：
+ohMyHarness 不要求修改通用 Superpowers skills 来改变文档路径。推荐在目标项目的 `AGENTS.md` 或 `CLAUDE.md` 中加入项目偏好，让这些偏好覆盖通用 skill 的默认路径：
 
 ```text
 docs/harness/
@@ -103,11 +103,18 @@ docs/harness/
 - `design` 记录实际构建了什么以及为什么这样构建。
 - `standard` 和 `knowledge` 保存跨任务可复用的约束与经验。
 
+可直接复制的片段位于：
+
+```text
+docs/snippets/agent-docs-harness.md
+```
+
 ## 仓库定位
 
 本仓库是 **skills-first** 项目：
 
 - 通过 Skills CLI 分发 skills。
+- 通用 Superpowers skills 尽量保持上游原版；ohMyHarness 的 `docs/harness` 路径偏好通过目标项目的 `AGENTS.md` / `CLAUDE.md` 片段表达。
 - 不发布 Claude、Codex、Cursor、Gemini 或 OpenCode 插件包。
 - 不维护独立 npm 包。
 - 不复制上游项目的赞助、社区、插件市场和发布流程。
@@ -137,6 +144,6 @@ npm test
 
 本仓库中的部分通用工程 skills 基于 [obra/superpowers](https://github.com/obra/superpowers) 修改，并保留其 MIT 许可证和原作者版权声明。
 
-ohMyHarness 在此基础上调整了中文工作流、`docs/harness` 文档结构、主链路验收、设计回流以及 Codex / Claude Code / OpenCode 的统一安装方式。
+ohMyHarness 在此基础上保留自有增量能力，例如设计回流，并通过项目级 `AGENTS.md` / `CLAUDE.md` 片段提供 `docs/harness` 文档约定。
 
 详见 [LICENSE](./LICENSE)。

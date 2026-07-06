@@ -1,155 +1,166 @@
 ---
 name: finishing-a-development-branch
-description: 实现完成、所有测试通过后，需要决定如何整合工作时使用——通过提供合并、PR 或清理的结构化选项来指导开发工作的完成
+description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
 ---
 
-# 完成开发分支
+# Finishing a Development Branch
 
-## 概述
+## Overview
 
-通过提供清晰的选项并处理选择的工作流来指导开发工作的完成。
+Guide completion of development work by presenting clear options and handling chosen workflow.
 
-**核心原则：** 验证测试 → 检测环境 → 提供选项 → 执行选择 → 清理。
+**Core principle:** Verify tests → Detect environment → Present options → Execute choice → Clean up.
 
-**开始时宣告：** "我正在使用 finishing-a-development-branch skill 来完成这项工作。"
+**Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
-## 流程
+## The Process
 
-### 第 1 步：验证测试
+### Step 1: Verify Tests
 
-**在提供选项之前，验证测试通过：**
+**Before presenting options, verify tests pass:**
 
 ```bash
-# 运行项目的测试套件
+# Run project's test suite
 npm test / cargo test / pytest / go test ./...
 ```
 
-**如果测试失败：**
+**If tests fail:**
 ```
-测试失败（<N> 个失败）。完成前必须修复：
+Tests failing (<N> failures). Must fix before completing:
 
-[显示失败]
+[Show failures]
 
-在测试通过之前无法继续合并/PR。
+Cannot proceed with merge/PR until tests pass.
 ```
 
-停止。不要进入第 2 步。
+Stop. Don't proceed to Step 2.
 
-**如果测试通过：** 继续第 2 步。
+**If tests pass:** Continue to Step 2.
 
-### 第 2 步：检测环境
+### Step 2: Detect Environment
 
-**在提供选项之前确定工作空间状态：**
+**Determine workspace state before presenting options:**
 
 ```bash
 GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
 GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
 ```
 
-这决定显示哪个菜单以及清理方式：
+This determines which menu to show and how cleanup works:
 
-| 状态 | 菜单 | 清理 |
+| State | Menu | Cleanup |
 |-------|------|---------|
-| `GIT_DIR == GIT_COMMON`（普通 repo） | 标准 4 个选项 | 无 worktree 需清理 |
-| `GIT_DIR != GIT_COMMON`，命名分支 | 标准 4 个选项 | 基于来源（见第 6 步） |
-| `GIT_DIR != GIT_COMMON`，detached HEAD | 精简 3 个选项（无合并） | 无清理（外部管理） |
+| `GIT_DIR == GIT_COMMON` (normal repo) | Standard 4 options | No worktree to clean up |
+| `GIT_DIR != GIT_COMMON`, named branch | Standard 4 options | Provenance-based (see Step 6) |
+| `GIT_DIR != GIT_COMMON`, detached HEAD | Reduced 3 options (no merge) | No cleanup (externally managed) |
 
-### 第 3 步：确定基础分支
+### Step 3: Determine Base Branch
 
 ```bash
-# 尝试常见的基础分支
+# Try common base branches
 git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 ```
 
-或询问："这个分支从 main 分出——对吗？"
+Or ask: "This branch split from main - is that correct?"
 
-### 第 4 步：提供选项
+### Step 4: Present Options
 
-**普通 repo 和命名分支 worktree——提供恰好这 4 个选项：**
-
-```
-实现完成。你想怎么做？
-
-1. 本地合并回 <base-branch>
-2. 保持分支原样（我稍后处理）
-3. 丢弃这项工作
-
-选哪个？
-```
-
-**Detached HEAD——提供恰好这 3 个选项：**
+**Normal repo and named-branch worktree — present exactly these 4 options:**
 
 ```
-实现完成。你在 detached HEAD 上（外部管理的工作空间）。
+Implementation complete. What would you like to do?
 
-1. 保持原样（我稍后处理）
-2. 丢弃这项工作
+1. Merge back to <base-branch> locally
+2. Push and create a Pull Request
+3. Keep the branch as-is (I'll handle it later)
+4. Discard this work
 
-选哪个？
+Which option?
 ```
 
-**不要添加说明**——保持选项简洁。
+**Detached HEAD — present exactly these 3 options:**
 
-### 第 5 步：执行选择
+```
+Implementation complete. You're on a detached HEAD (externally managed workspace).
 
-#### 选项 1：本地合并
+1. Push as new branch and create a Pull Request
+2. Keep as-is (I'll handle it later)
+3. Discard this work
+
+Which option?
+```
+
+**Don't add explanation** - keep options concise.
+
+### Step 5: Execute Choice
+
+#### Option 1: Merge Locally
 
 ```bash
-# 获取主 repo 根目录以确保 CWD 安全
+# Get main repo root for CWD safety
 MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
 cd "$MAIN_ROOT"
 
-# 先合并——在移除任何东西之前验证成功
+# Merge first — verify success before removing anything
 git checkout <base-branch>
 git pull
 git merge <feature-branch>
 
-# 在合并结果上验证测试
+# Verify tests on merged result
 <test command>
 
-# 仅在合并成功后：清理 worktree（第 6 步），然后删除分支
+# Only after merge succeeds: cleanup worktree (Step 6), then delete branch
 ```
 
-然后：清理 worktree（第 6 步），然后删除分支：
+Then: Cleanup worktree (Step 6), then delete branch:
 
 ```bash
 git branch -d <feature-branch>
 ```
 
-#### 选项 2：保持原样
+#### Option 2: Push and Create PR
 
-报告："保持分支 <name>。Worktree 保留在 <path>。"
-
-**不要清理 worktree。**
-
-#### 选项 3：丢弃
-
-**先确认：**
-```
-这将永久删除：
-- 分支 <name>
-- 所有提交：<commit-list>
-- Worktree 位于 <path>
-
-输入 'discard' 确认。
+```bash
+# Push branch
+git push -u origin <feature-branch>
 ```
 
-等待精确确认。
+**Do NOT clean up worktree** — user needs it alive to iterate on PR feedback.
 
-如果确认：
+#### Option 3: Keep As-Is
+
+Report: "Keeping branch <name>. Worktree preserved at <path>."
+
+**Don't cleanup worktree.**
+
+#### Option 4: Discard
+
+**Confirm first:**
+```
+This will permanently delete:
+- Branch <name>
+- All commits: <commit-list>
+- Worktree at <path>
+
+Type 'discard' to confirm.
+```
+
+Wait for exact confirmation.
+
+If confirmed:
 ```bash
 MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
 cd "$MAIN_ROOT"
 ```
 
-然后：清理 worktree（第 6 步），然后强制删除分支：
+Then: Cleanup worktree (Step 6), then force-delete branch:
 ```bash
 git branch -D <feature-branch>
 ```
 
-### 第 6 步：清理工作空间
+### Step 6: Cleanup Workspace
 
-**仅在选项 1 和 3 时运行。** 选项 2 始终保留 worktree。
+**Only runs for Options 1 and 4.** Options 2 and 3 always preserve the worktree.
 
 ```bash
 GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
@@ -157,69 +168,74 @@ GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
 WORKTREE_PATH=$(git rev-parse --show-toplevel)
 ```
 
-**如果 `GIT_DIR == GIT_COMMON`：** 普通 repo，无 worktree 需清理。完成。
+**If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
 
-**如果 worktree 路径在 `.worktrees/`、`worktrees/` 或 `~/.config/superpowers/worktrees/` 下：** Superpowers 创建了这个 worktree——我们负责清理。
+**If worktree path is under `.worktrees/` or `worktrees/`:** Superpowers created this worktree — we own cleanup.
 
 ```bash
 MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
 cd "$MAIN_ROOT"
 git worktree remove "$WORKTREE_PATH"
-git worktree prune  # 自愈：清理任何过期注册
+git worktree prune  # Self-healing: clean up any stale registrations
 ```
 
-**否则：** 宿主环境（harness）拥有这个工作空间。不要移除它。如果你的平台提供了 workspace-exit 工具，使用它。否则，保持工作空间不变。
+**Otherwise:** The host environment (harness) owns this workspace. Do NOT remove it. If your platform provides a workspace-exit tool, use it. Otherwise, leave the workspace in place.
 
-## 快速参考
+## Quick Reference
 
-| 选项 | 合并 | 保持 Worktree | 清理分支 |
-|--------|-------|---------------|----------------|
-| 1. 本地合并 | 是 | - | 是 |
-| 2. 保持原样 | - | 是 | - |
-| 3. 丢弃 | - | - | 是（强制） |
+| Option | Merge | Push | Keep Worktree | Cleanup Branch |
+|--------|-------|------|---------------|----------------|
+| 1. Merge locally | yes | - | - | yes |
+| 2. Create PR | - | yes | yes | - |
+| 3. Keep as-is | - | - | yes | - |
+| 4. Discard | - | - | - | yes (force) |
 
-## 常见错误
+## Common Mistakes
 
-**跳过测试验证**
-- **问题：** 合并有问题的代码，创建失败的 PR
-- **修复：** 在提供选项之前始终验证测试
+**Skipping test verification**
+- **Problem:** Merge broken code, create failing PR
+- **Fix:** Always verify tests before offering options
 
-**开放式问题**
-- **问题：** "接下来做什么？"含义模糊
-- **修复：** 提供恰好 4 个结构化选项（detached HEAD 为 3 个）
+**Open-ended questions**
+- **Problem:** "What should I do next?" is ambiguous
+- **Fix:** Present exactly 4 structured options (or 3 for detached HEAD)
 
-**在删除 worktree 之前删除分支**
-- **问题：** `git branch -d` 失败，因为 worktree 仍然引用该分支
-- **修复：** 先合并，移除 worktree，然后删除分支
+**Cleaning up worktree for Option 2**
+- **Problem:** Remove worktree user needs for PR iteration
+- **Fix:** Only cleanup for Options 1 and 4
 
-**从 worktree 内部运行 git worktree remove**
-- **问题：** 当 CWD 在被移除的 worktree 内部时命令静默失败
-- **修复：** 在 `git worktree remove` 之前始终 `cd` 到主 repo 根目录
+**Deleting branch before removing worktree**
+- **Problem:** `git branch -d` fails because worktree still references the branch
+- **Fix:** Merge first, remove worktree, then delete branch
 
-**清理 harness 拥有的 worktree**
-- **问题：** 移除 harness 创建的 worktree 会导致幽灵状态
-- **修复：** 只清理 `.worktrees/`、`worktrees/` 或 `~/.config/superpowers/worktrees/` 下的 worktree
+**Running git worktree remove from inside the worktree**
+- **Problem:** Command fails silently when CWD is inside the worktree being removed
+- **Fix:** Always `cd` to main repo root before `git worktree remove`
 
-**丢弃时无确认**
-- **问题：** 意外删除工作
-- **修复：** 要求输入"discard"确认
+**Cleaning up harness-owned worktrees**
+- **Problem:** Removing a worktree the harness created causes phantom state
+- **Fix:** Only clean up worktrees under `.worktrees/` or `worktrees/`
+
+**No confirmation for discard**
+- **Problem:** Accidentally delete work
+- **Fix:** Require typed "discard" confirmation
 
 ## Red Flags
 
-**绝不：**
-- 在测试失败时继续
-- 在未验证合并结果测试的情况下合并
-- 在无确认的情况下删除工作
-- 在未明确请求的情况下强制推送
-- 在确认合并成功之前移除 worktree
-- 清理你没有创建的 worktree（来源检查）
-- 从 worktree 内部运行 `git worktree remove`
+**Never:**
+- Proceed with failing tests
+- Merge without verifying tests on result
+- Delete work without confirmation
+- Force-push without explicit request
+- Remove a worktree before confirming merge success
+- Clean up worktrees you didn't create (provenance check)
+- Run `git worktree remove` from inside the worktree
 
-**始终：**
-- 在提供选项之前验证测试
-- 在显示菜单之前检测环境
-- 提供恰好 4 个选项（detached HEAD 为 3 个）
-- 为选项 3 获取输入确认
-- 仅为选项 1 和 3 清理 worktree
-- 在移除 worktree 之前 `cd` 到主 repo 根目录
-- 移除后运行 `git worktree prune`
+**Always:**
+- Verify tests before offering options
+- Detect environment before presenting menu
+- Present exactly 4 options (or 3 for detached HEAD)
+- Get typed confirmation for Option 4
+- Clean up worktree for Options 1 & 4 only
+- `cd` to main repo root before worktree removal
+- Run `git worktree prune` after removal

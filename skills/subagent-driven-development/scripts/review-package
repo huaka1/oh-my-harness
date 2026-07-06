@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
+# Generate a review package: commit list, stat summary, and the net
+# diff with extended context, written to a file the reviewer reads in one
+# call. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
+# tasks intact.
+#
+# Usage: review-package BASE HEAD [OUTFILE]
+# Default OUTFILE: <repo-root>/.superpowers/sdd/review-<base7>..<head7>.diff
+# (named per range, so a re-review after fixes gets a distinct fresh file).
 set -euo pipefail
 
 if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-  echo "usage: review-package BASE HEAD|WORKTREE [OUTFILE]" >&2
+  echo "usage: review-package BASE HEAD [OUTFILE]" >&2
   exit 2
 fi
 
@@ -10,44 +18,27 @@ base=$1
 head=$2
 
 git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
+git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
 
 if [ $# -eq 3 ]; then
   out=$3
 else
-  dir=$(git rev-parse --git-path sdd)
-  mkdir -p "$dir"
-  dir=$(cd "$dir" && pwd)
-  if [ "$head" = "WORKTREE" ]; then
-    out="$dir/review-$(git rev-parse --short "$base")..worktree.diff"
-  else
-    git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
-    out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
-  fi
+  dir=$("$(cd "$(dirname "$0")" && pwd)/sdd-workspace")
+  out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
 fi
 
 {
   echo "# Review package: ${base}..${head}"
   echo
   echo "## Commits"
-  if [ "$head" = "WORKTREE" ]; then
-    git log --oneline "${base}..HEAD" || true
-  else
-    git log --oneline "${base}..${head}"
-  fi
+  git log --oneline "${base}..${head}"
   echo
   echo "## Files changed"
-  if [ "$head" = "WORKTREE" ]; then
-    git diff --stat "$base"
-  else
-    git diff --stat "${base}..${head}"
-  fi
+  git diff --stat "${base}..${head}"
   echo
   echo "## Diff"
-  if [ "$head" = "WORKTREE" ]; then
-    git diff -U10 "$base"
-  else
-    git diff -U10 "${base}..${head}"
-  fi
+  git diff -U10 "${base}..${head}"
 } > "$out"
 
-echo "wrote ${out}: $(wc -c < "$out" | tr -d ' ') bytes"
+commits=$(git rev-list --count "${base}..${head}")
+echo "wrote ${out}: ${commits} commit(s), $(wc -c < "$out" | tr -d ' ') bytes"
